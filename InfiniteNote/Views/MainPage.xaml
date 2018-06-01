@@ -33,7 +33,8 @@
     </Page.Resources>
 
     <Grid>
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Enabled" x:Name="ScrollViewer">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Enabled"
+                      IsHorizontalRailEnabled="False" IsVerticalRailEnabled="False" x:Name="ScrollViewer">
             <Grid Width="16384" Height="16384">
                 <xaml:CanvasVirtualControl Width="16384" Height="16384" RegionsInvalidated="CanvasVirtualControl_OnRegionsInvalidated" x:Name="Dry" />
             </Grid>
