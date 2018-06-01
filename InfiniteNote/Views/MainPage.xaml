@@ -1,0 +1,79 @@
+﻿<Page
+    x:Class="InfiniteNote.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:xaml="using:Microsoft.Graphics.Canvas.UI.Xaml"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <Style x:Key="CanvasTextBoxButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Background" Value="{ThemeResource SystemChromeMediumColor}" />
+            <Setter Property="Foreground" Value="{ThemeResource SystemControlForegroundBaseHighBrush}" />
+        </Style>
+        <Storyboard x:Key="CopyAnimation">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Rectangle" Storyboard.TargetProperty="Opacity">
+                <EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="0.2">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CircleEase EasingMode="EaseOut" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CircleEase EasingMode="EaseOut" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
+    </Page.Resources>
+
+    <Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Enabled" x:Name="ScrollViewer">
+            <Grid Width="16384" Height="16384">
+                <xaml:CanvasVirtualControl Width="16384" Height="16384" RegionsInvalidated="CanvasVirtualControl_OnRegionsInvalidated" x:Name="Dry" />
+            </Grid>
+        </ScrollViewer>
+        <InkCanvas x:Name="InkCanvas" IsHitTestVisible="False"/>
+        <Rectangle x:Name="Rectangle" IsHitTestVisible="False" Fill="Black" Opacity="0"/>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
+            <InkToolbar TargetInkCanvas="{Binding ElementName=InkCanvas}" x:Name="Toolbar"/>
+
+            <StackPanel Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}" Orientation="Horizontal">
+                <Grid Width="2" Height="48" Background="{ThemeResource SystemControlBackgroundListMediumBrush}" />
+                <InkToolbarCustomToggleButton x:Name="EnableTouchInkingButton" ToolTipService.ToolTip="Touch Inking">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xED5F;" />
+                </InkToolbarCustomToggleButton>
+                <Button x:Name="UndoButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Undo">
+                    <SymbolIcon Symbol="Undo" />
+                </Button>
+                <Button x:Name="RedoButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Redo">
+                    <SymbolIcon Symbol="Redo" />
+                </Button>
+            </StackPanel>
+
+            <StackPanel Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}" Orientation="Horizontal">
+                <Grid Width="2" Height="48" Background="{ThemeResource SystemControlBackgroundListMediumBrush}" />
+                <Button x:Name="EraseAllButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Erase All">
+                    <SymbolIcon Symbol="Delete" />
+                </Button>
+                <Button x:Name="SaveButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Save">
+                    <SymbolIcon Symbol="Save" />
+                </Button>
+                <Button x:Name="CopyButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Copy">
+                    <SymbolIcon Symbol="Copy" />
+                </Button>
+                <Button x:Name="ShareButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Share">
+                    <SymbolIcon Symbol="Share" />
+                </Button>
+                <Button x:Name="CloseButton" Style="{StaticResource CloseButtonStyle}" ToolTipService.ToolTip="Redo">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE10A;" />
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Page>
