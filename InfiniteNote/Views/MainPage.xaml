@@ -46,7 +46,8 @@
                       behaviors:FrameworkElementBinding.ActualWidth="{x:Bind viewModel.ViewportWidth.Value,Mode=TwoWay}"
                       behaviors:FrameworkElementBinding.ActualHeight="{x:Bind viewModel.ViewportHeight.Value,Mode=TwoWay}"
                       behaviors:ScrollViewerBinding.HorizontalOffset="{x:Bind viewModel.ViewportOffsetX.Value,Mode=TwoWay}"
-                      behaviors:ScrollViewerBinding.VerticalOffset="{x:Bind viewModel.ViewportOffsetY.Value,Mode=TwoWay}">
+                      behaviors:ScrollViewerBinding.VerticalOffset="{x:Bind viewModel.ViewportOffsetY.Value,Mode=TwoWay}"
+                      behaviors:ScrollViewerBinding.ScrollEnabled="{x:Bind viewModel.IsScrollEnabled.Value,Mode=OneWay}">
             <interactivity:Interaction.Behaviors>
                 <behaviors:ScrollViewerBinding/>
             </interactivity:Interaction.Behaviors>
