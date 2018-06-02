@@ -5,7 +5,11 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:xaml="using:Microsoft.Graphics.Canvas.UI.Xaml"
-    mc:Ignorable="d"
+    xmlns:interactivity="using:Microsoft.Xaml.Interactivity"
+    xmlns:behaviors="using:InfiniteNote.Views.Behaviors"
+    xmlns:actions="using:InfiniteNote.Views.Actions"
+    xmlns:messages="using:InfiniteNote.Views.Messages"
+    mc:Ignorable="d" Loaded="{x:Bind viewModel.Loaded}"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
@@ -32,49 +36,86 @@
         </Storyboard>
     </Page.Resources>
 
+    <interactivity:Interaction.Behaviors>
+        <behaviors:AppLifecycle Suspending="{x:Bind viewModel.Suspend}" Resuming="{x:Bind viewModel.Resume}"/>
+    </interactivity:Interaction.Behaviors>
+
     <Grid>
         <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Enabled"
-                      IsHorizontalRailEnabled="False" IsVerticalRailEnabled="False" x:Name="ScrollViewer">
-            <Grid Width="16384" Height="16384" x:Name="CanvasGrid">
-                <xaml:CanvasVirtualControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RegionsInvalidated="CanvasVirtualControl_OnRegionsInvalidated" x:Name="Dry" />
+                      IsHorizontalRailEnabled="False" IsVerticalRailEnabled="False"
+                      behaviors:FrameworkElementBinding.ActualWidth="{x:Bind viewModel.ViewportWidth.Value,Mode=TwoWay}"
+                      behaviors:FrameworkElementBinding.ActualHeight="{x:Bind viewModel.ViewportHeight.Value,Mode=TwoWay}"
+                      behaviors:ScrollViewerBinding.HorizontalOffset="{x:Bind viewModel.ViewportOffsetX.Value,Mode=TwoWay}"
+                      behaviors:ScrollViewerBinding.VerticalOffset="{x:Bind viewModel.ViewportOffsetY.Value,Mode=TwoWay}">
+            <interactivity:Interaction.Behaviors>
+                <behaviors:ScrollViewerBinding/>
+            </interactivity:Interaction.Behaviors>
+            <Grid Width="{x:Bind viewModel.CanvasWidth.Value,Mode=OneWay}" Height="{x:Bind viewModel.CanvasHeight.Value,Mode=OneWay}">
+                <xaml:CanvasVirtualControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RegionsInvalidated="{x:Bind viewModel.RegionInvalidated}">
+                    <interactivity:Interaction.Behaviors>
+                        <messages:InvalidateRequestedMessage>
+                            <actions:InvalidateAction/>
+                        </messages:InvalidateRequestedMessage>
+                    </interactivity:Interaction.Behaviors>
+                </xaml:CanvasVirtualControl>
             </Grid>
         </ScrollViewer>
-        <InkCanvas x:Name="InkCanvas" IsHitTestVisible="False"/>
-        <Rectangle x:Name="Rectangle" IsHitTestVisible="False" Fill="Black" Opacity="0"/>
+        <InkCanvas x:Name="InkCanvas" IsHitTestVisible="False"
+                   behaviors:InkCanvasBinding.IsTouchInputEnabled="{x:Bind viewModel.IsTouchInputEnabled.Value,Mode=OneWay}">
+            <interactivity:Interaction.Behaviors>
+                <behaviors:InkCanvasBinding StrokeStarted="{x:Bind viewModel.StrokeStarted}"
+                                            StrokeEnded="{x:Bind viewModel.StrokeEnded}"
+                                            PointerMoved="{x:Bind viewModel.PointerMoved}"
+                                            StrokeCollected="{x:Bind viewModel.StrokeCollected}"/>
+            </interactivity:Interaction.Behaviors>
+        </InkCanvas>
+        <Rectangle x:Name="Rectangle" IsHitTestVisible="False" Fill="Black" Opacity="0">
+            <interactivity:Interaction.Behaviors>
+                <messages:StartAnimationMessage>
+                    <actions:StartAnimationAction Storyboard="{StaticResource CopyAnimation}" />
+                </messages:StartAnimationMessage>
+            </interactivity:Interaction.Behaviors>
+        </Rectangle>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
-            <InkToolbar TargetInkCanvas="{Binding ElementName=InkCanvas}" x:Name="Toolbar"/>
+            <InkToolbar TargetInkCanvas="{Binding ElementName=InkCanvas}" EraseAllClicked="{x:Bind viewModel.EraseAll}"
+                        behaviors:InkToolbarBinding.ActiveToolKind="{x:Bind viewModel.ActiveTool.Value,Mode=TwoWay}">
+                <interactivity:Interaction.Behaviors>
+                    <behaviors:InkToolbarBinding />
+                </interactivity:Interaction.Behaviors>
+            </InkToolbar>
 
             <StackPanel Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}" Orientation="Horizontal">
                 <Grid Width="2" Height="48" Background="{ThemeResource SystemControlBackgroundListMediumBrush}" />
-                <InkToolbarCustomToggleButton x:Name="EnableTouchInkingButton" ToolTipService.ToolTip="Touch Inking">
+                <InkToolbarCustomToggleButton ToolTipService.ToolTip="Touch Inking" IsChecked="{x:Bind viewModel.IsTouchInputEnabled.Value,Mode=TwoWay}">
                     <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xED5F;" />
                 </InkToolbarCustomToggleButton>
-                <Button x:Name="UndoButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Undo">
+                <Button Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Undo" Click="{x:Bind viewModel.Undo}">
                     <SymbolIcon Symbol="Undo" />
                 </Button>
-                <Button x:Name="RedoButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Redo">
+                <Button Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Redo" Click="{x:Bind viewModel.Redo}">
                     <SymbolIcon Symbol="Redo" />
                 </Button>
             </StackPanel>
 
             <StackPanel Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}" Orientation="Horizontal">
                 <Grid Width="2" Height="48" Background="{ThemeResource SystemControlBackgroundListMediumBrush}" />
-                <Button x:Name="EraseAllButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Erase All">
+                <Button Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Erase All" Click="{x:Bind viewModel.EraseAll}">
                     <SymbolIcon Symbol="Delete" />
                 </Button>
-                <Button x:Name="SaveButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Save">
+                <Button Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Save" Click="{x:Bind viewModel.Save}">
                     <SymbolIcon Symbol="Save" />
                 </Button>
-                <Button x:Name="CopyButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Copy">
+                <Button Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Copy" Click="{x:Bind viewModel.Copy}">
                     <SymbolIcon Symbol="Copy" />
                 </Button>
-                <Button x:Name="ShareButton" Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Share">
+                <Button Style="{StaticResource CanvasTextBoxButtonStyle}" ToolTipService.ToolTip="Share" Click="{x:Bind viewModel.Share}">
                     <SymbolIcon Symbol="Share" />
                 </Button>
-                <Button x:Name="CloseButton" Style="{StaticResource CloseButtonStyle}" ToolTipService.ToolTip="Redo">
+                <Button Style="{StaticResource CloseButtonStyle}" ToolTipService.ToolTip="Close" Click="{x:Bind viewModel.Close}">
                     <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE10A;" />
                 </Button>
             </StackPanel>
         </StackPanel>
     </Grid>
 </Page>
+

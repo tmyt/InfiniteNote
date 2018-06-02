@@ -1,5 +1,4 @@
 ﻿using System;
-using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
@@ -20,29 +19,6 @@ namespace InfiniteNote
         public App()
         {
             InitializeComponent();
-            Suspending += OnSuspending;
-            EnteredBackground += App_EnteredBackground;
-            LeavingBackground += App_LeavingBackground;
-        }
-
-        private async void App_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
-        {
-            using (var defferal = e.GetDeferral())
-            {
-                var page = (Window.Current.Content as Frame)?.Content as Views.MainPage;
-                if (page == null) return;
-                await page.Restore();
-            }
-        }
-
-        private async void App_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
-        {
-            using (var defferal = e.GetDeferral())
-            {
-                var page = (Window.Current.Content as Frame)?.Content as Views.MainPage;
-                if (page == null) return;
-                await page.Suspend();
-            }
         }
 
         /// <summary>
@@ -92,20 +68,6 @@ namespace InfiniteNote
         private void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
         {
             throw new Exception("Failed to load Page " + e.SourcePageType.FullName);
-        }
-
-        /// <summary>
-        /// アプリケーションの実行が中断されたときに呼び出されます。
-        /// アプリケーションが終了されるか、メモリの内容がそのままで再開されるかに
-        /// かかわらず、アプリケーションの状態が保存されます。
-        /// </summary>
-        /// <param name="sender">中断要求の送信元。</param>
-        /// <param name="e">中断要求の詳細。</param>
-        private void OnSuspending(object sender, SuspendingEventArgs e)
-        {
-            var deferral = e.SuspendingOperation.GetDeferral();
-            //TODO: アプリケーションの状態を保存してバックグラウンドの動作があれば停止します
-            deferral.Complete();
         }
     }
 }

@@ -9,10 +9,5 @@ namespace InfiniteNote.Extensions
         {
             return new Point(pt.X + x, pt.Y + y);
         }
-
-        public static Point Translate(this Point pt, ScrollViewer scrollViewer)
-        {
-            return pt.Translate(scrollViewer.HorizontalOffset, scrollViewer.VerticalOffset);
-        }
     }
 }
