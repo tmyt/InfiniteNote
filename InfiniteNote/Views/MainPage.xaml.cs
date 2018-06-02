@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
@@ -33,21 +34,24 @@ namespace InfiniteNote.Views
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        private const int CanvasWidth = 16384;
-        private const int CanvasHeight = 16384;
+        private const double DefaultCanvasWidth = 16384;
+        private const double DefaultCanvasHeight = 16384;
 
         private bool _resumed;
         private readonly List<InkStroke> _strokes;
-        private readonly Stack<IReadOnlyList<InkStroke>> _undoBuffer;
-        private readonly Stack<IReadOnlyList<InkStroke>> _redoBuffer;
+        private readonly Stack<IAction[]> _undoBuffer;
+        private readonly Stack<IAction[]> _redoBuffer;
         private readonly InkSynchronizer _inkSynchronizer;
+
+        private double CanvasWidth = DefaultCanvasWidth;
+        private double CanvasHeight = DefaultCanvasHeight;
 
         public MainPage()
         {
             this.InitializeComponent();
             _strokes = new List<InkStroke>();
-            _undoBuffer = new Stack<IReadOnlyList<InkStroke>>();
-            _redoBuffer = new Stack<IReadOnlyList<InkStroke>>();
+            _undoBuffer = new Stack<IAction[]>();
+            _redoBuffer = new Stack<IAction[]>();
             _inkSynchronizer = InkCanvas.InkPresenter.ActivateCustomDrying();
             RegisterEvents();
         }
@@ -95,11 +99,36 @@ namespace InfiniteNote.Views
         private void InkPresenter_StrokesCollected(InkPresenter sender, InkStrokesCollectedEventArgs args)
         {
             var inkStrokes = _inkSynchronizer.BeginDry().Select(Translate).ToReadOnlyList();
-            _undoBuffer.Push(inkStrokes);
-            _redoBuffer.Clear();
-            // begin dry
             _strokes.AddRange(inkStrokes);
             _inkSynchronizer.EndDry();
+            // build undo buffer
+            var left = inkStrokes.Select(x => x.BoundingRect.Left).Min();
+            var right = inkStrokes.Select(x => x.BoundingRect.Right).Min();
+            var top = inkStrokes.Select(x => x.BoundingRect.Top).Min();
+            var bottom = inkStrokes.Select(x => x.BoundingRect.Bottom).Min();
+            var extendsX = 0.0;
+            var extendsY = 0.0;
+            if (left < ActualWidth) extendsX = -ActualWidth;
+            if (CanvasWidth - right < ActualWidth) extendsX = ActualWidth;
+            if (top < ActualHeight) extendsY = -ActualHeight;
+            if (CanvasHeight - bottom < ActualHeight) extendsY = ActualHeight;
+            var actions = new List<IAction>();
+            actions.Add(new StrokeAction
+            {
+                Type = ActionType.Draw,
+                Strokes = inkStrokes,
+            });
+            if (extendsX != 0 || extendsY != 0)
+            {
+                actions.Add(new ResizeAction
+                {
+                    Type = ActionType.Resize,
+                    ExtendsX = extendsX,
+                    ExtendsY = extendsY,
+                });
+                ResizeCore(extendsX, extendsY, false);
+            }
+            PushUndo(actions.ToArray());
             Dry.Invalidate();
         }
 
@@ -119,7 +148,7 @@ namespace InfiniteNote.Views
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
             Loaded -= MainPage_Loaded;
-            ScrollViewer.ChangeView((CanvasWidth - ScrollViewer.ActualWidth) / 2, (CanvasHeight - ScrollViewer.ActualHeight) / 2, null);
+            ScrollViewer.ChangeView((CanvasWidth - ScrollViewer.ActualWidth) / 2, (CanvasHeight - ScrollViewer.ActualHeight) / 2, null, true);
             await Restore();
         }
 
@@ -169,7 +198,6 @@ namespace InfiniteNote.Views
             return newStroke;
         }
 
-
         public void Erase(Point point)
         {
             const double toleranceWithZoom = 5.0;
@@ -188,8 +216,69 @@ namespace InfiniteNote.Views
             }
         }
 
+        private void PushUndo(IAction[] actions)
+        {
+            _undoBuffer.Push(actions);
+            _redoBuffer.Clear();
+        }
+
+        private void ResizeCore(double extendsX, double extendsY, bool undo)
+        {
+            var needReplace = false;
+            var replaceX = 0.0;
+            var replaceY = 0.0;
+            if (!undo)
+            {
+                CanvasWidth += Math.Abs(extendsX);
+                CanvasHeight += Math.Abs(extendsY);
+            }
+            else
+            {
+                CanvasWidth -= Math.Abs(extendsX);
+                CanvasHeight -= Math.Abs(extendsY);
+            }
+            CanvasGrid.Width = CanvasWidth;
+            CanvasGrid.Height = CanvasHeight;
+            if (extendsX < 0)
+            {
+                if (undo) extendsX = -extendsX;
+                ScrollViewer.ChangeView(ScrollViewer.HorizontalOffset - extendsX, null, null, true);
+                needReplace = true;
+                replaceX = -extendsX;
+            }
+            if (extendsY < 0)
+            {
+                if (undo) extendsY = -extendsY;
+                ScrollViewer.ChangeView(null, ScrollViewer.VerticalOffset - extendsY, null, true);
+                needReplace = true;
+                replaceY = -extendsY;
+            }
+            if (needReplace)
+            {
+                foreach (var stroke in _strokes)
+                {
+                    stroke.PointTransform *= Matrix3x2.CreateTranslation((float)replaceX, (float)replaceY);
+                }
+            }
+        }
+
         private Task EraseAll()
         {
+            var actions = new List<IAction>();
+            actions.Add(new StrokeAction
+            {
+                Type = ActionType.Erase,
+                Strokes = _strokes.ToReadOnlyList(),
+            });
+            actions.Add(new DefaultSizeAction
+            {
+                Type = ActionType.DefaultSize,
+                Viewport = new Rect(ScrollViewer.HorizontalOffset, ScrollViewer.VerticalOffset, CanvasWidth, CanvasHeight),
+            });
+            CanvasGrid.Width = CanvasWidth = DefaultCanvasWidth;
+            CanvasGrid.Height = CanvasHeight = DefaultCanvasHeight;
+            ScrollViewer.ChangeView((CanvasWidth - ActualWidth) / 2, (CanvasHeight - ActualHeight) / 2, null, true);
+            PushUndo(actions.ToArray());
             _strokes.Clear();
             Dry.Invalidate();
             return Task.CompletedTask;
@@ -198,9 +287,30 @@ namespace InfiniteNote.Views
         private Task Undo()
         {
             if (_undoBuffer.Count == 0) return Task.CompletedTask;
-            var inkStroke = _undoBuffer.Pop();
-            _redoBuffer.Push(inkStroke);
-            _strokes.RemoveRange(inkStroke);
+            var actions = _undoBuffer.Pop();
+            _redoBuffer.Push(actions);
+            foreach (var action in actions)
+            {
+                switch (action.Type)
+                {
+                    case ActionType.Draw:
+                        _strokes.RemoveRange(((StrokeAction)action).Strokes);
+                        break;
+                    case ActionType.Erase:
+                        _strokes.AddRange(((StrokeAction)action).Strokes);
+                        break;
+                    case ActionType.Resize:
+                        ResizeCore(((ResizeAction)action).ExtendsX, ((ResizeAction)action).ExtendsY, true);
+                        break;
+                    case ActionType.DefaultSize:
+                        CanvasGrid.Width = CanvasWidth = ((DefaultSizeAction)action).Viewport.Width;
+                        CanvasGrid.Height = CanvasHeight = ((DefaultSizeAction)action).Viewport.Height;
+                        ScrollViewer.ChangeView(((DefaultSizeAction)action).Viewport.Left, ((DefaultSizeAction)action).Viewport.Top, null, true);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
             Dry.Invalidate();
             return Task.CompletedTask;
         }
@@ -208,9 +318,30 @@ namespace InfiniteNote.Views
         private Task Redo()
         {
             if (_redoBuffer.Count == 0) return Task.CompletedTask;
-            var inkStroke = _redoBuffer.Pop();
-            _undoBuffer.Push(inkStroke);
-            _strokes.AddRange(inkStroke);
+            var actions = _redoBuffer.Pop();
+            _undoBuffer.Push(actions);
+            foreach (var action in actions)
+            {
+                switch (action.Type)
+                {
+                    case ActionType.Draw:
+                        _strokes.AddRange(((StrokeAction)action).Strokes);
+                        break;
+                    case ActionType.Erase:
+                        _strokes.RemoveRange(((StrokeAction)action).Strokes);
+                        break;
+                    case ActionType.Resize:
+                        ResizeCore(((ResizeAction)action).ExtendsX, ((ResizeAction)action).ExtendsY, false);
+                        break;
+                    case ActionType.DefaultSize:
+                        CanvasGrid.Width = CanvasWidth = DefaultCanvasWidth;
+                        CanvasGrid.Height = CanvasHeight = DefaultCanvasHeight;
+                        ScrollViewer.ChangeView((CanvasWidth - ActualWidth) / 2, (CanvasHeight - ActualHeight) / 2, null, true);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
             Dry.Invalidate();
             return Task.CompletedTask;
         }
@@ -269,11 +400,13 @@ namespace InfiniteNote.Views
             try
             {
                 var storageFile = await ApplicationData.Current.LocalFolder.GetFileAsync("stroke.json");
-                var strokes =
-                    JsonConvert.DeserializeObject<SerializableStroke[]>(await FileIO.ReadTextAsync(storageFile));
-                if (strokes == null) return;
+                var state = JsonConvert.DeserializeObject<ApplicationState>(await FileIO.ReadTextAsync(storageFile));
+                if (state?.Strokes == null) return;
                 _strokes.Clear();
-                _strokes.AddRange(strokes.AsInkStrokes());
+                _strokes.AddRange(state.Strokes.AsInkStrokes());
+                CanvasGrid.Width = CanvasWidth = state.Viewport.Width;
+                CanvasGrid.Height = CanvasHeight = state.Viewport.Height;
+                ScrollViewer.ChangeView(state.Viewport.Left, state.Viewport.Top, null, true);
             }
             catch (ArgumentException)
             {
@@ -297,30 +430,32 @@ namespace InfiniteNote.Views
         public async Task Suspend()
         {
             var storageFile = await ApplicationData.Current.LocalFolder.CreateFileAsync("stroke.json", CreationCollisionOption.ReplaceExisting);
-            var strokes = JsonConvert.SerializeObject(_strokes.AsSerializable());
-            await FileIO.WriteTextAsync(storageFile, strokes);
+            var state = JsonConvert.SerializeObject(new ApplicationState
+            {
+                Strokes = _strokes.AsSerializable().ToArray(),
+                Viewport = new Rect(ScrollViewer.HorizontalOffset, ScrollViewer.VerticalOffset, CanvasWidth, CanvasHeight),
+            });
+            await FileIO.WriteTextAsync(storageFile, state);
         }
 
         private Task<InMemoryRandomAccessStream> ConvertInkToPng()
         {
-            var left = Math.Min(_strokes.Select(x => x.BoundingRect.Left).DefaultIfEmpty(CanvasWidth).Min(),
-                ScrollViewer.HorizontalOffset);
-            var top = Math.Min(_strokes.Select(x => x.BoundingRect.Top).DefaultIfEmpty(CanvasHeight).Min(),
-                ScrollViewer.VerticalOffset);
-            var right = _strokes.Select(x => x.BoundingRect.Right).DefaultIfEmpty(0).Max();
-            var bottom = _strokes.Select(x => x.BoundingRect.Bottom).DefaultIfEmpty(0).Max();
-            var width = (int)Math.Min(Math.Max(right - left, ActualWidth), CanvasWidth);
-            var height = (int)Math.Min(Math.Max(bottom - top, ActualHeight), CanvasHeight);
+            var left = ScrollViewer.HorizontalOffset;
+            var top = ScrollViewer.VerticalOffset;
+            var width = (int)ActualWidth;
+            var height = (int)ActualHeight;
+            var rect = new Rect(left, top, width, height);
             var device = CanvasDevice.GetSharedDevice();
             var dpi = DisplayInformation.GetForCurrentView().LogicalDpi;
             var renderTarget = new CanvasRenderTarget(device, width, height, dpi);
             using (var ds = renderTarget.CreateDrawingSession())
             {
                 ds.Clear(Colors.White);
-                if (_strokes.Count > 0)
-                {
-                    ds.DrawInk(_strokes.Select(x => Translate(x, -left, -top)));
-                }
+                var inkStrokes = _strokes
+                    .Where(x => x.BoundingRect.IsIntersect(rect))
+                    .Select(x => Translate(x, -left, -top))
+                    .ToList();
+                if (inkStrokes.Count > 0) ds.DrawInk(inkStrokes);
             }
             var pixels = renderTarget.GetPixelBytes();
             return ConvertPixelsToPng(pixels, (int)renderTarget.SizeInPixels.Width, (int)renderTarget.SizeInPixels.Height);
@@ -342,5 +477,43 @@ namespace InfiniteNote.Views
             outputStream.Seek(0);
             return outputStream;
         }
+    }
+
+    public class ApplicationState
+    {
+        public SerializableStroke[] Strokes { get; set; }
+        public Rect Viewport { get; set; }
+    }
+
+    public interface IAction
+    {
+        ActionType Type { get; set; }
+    }
+
+    public class StrokeAction : IAction
+    {
+        public ActionType Type { get; set; }
+        public IReadOnlyList<InkStroke> Strokes { get; set; }
+    }
+
+    public class ResizeAction : IAction
+    {
+        public ActionType Type { get; set; }
+        public double ExtendsX { get; set; }
+        public double ExtendsY { get; set; }
+    }
+
+    public class DefaultSizeAction : IAction
+    {
+        public ActionType Type { get; set; }
+        public Rect Viewport { get; set; }
+    }
+
+    public enum ActionType
+    {
+        Draw,
+        Erase,
+        Resize,
+        DefaultSize,
     }
 }
