@@ -209,6 +209,14 @@ namespace InfiniteNote.Views
                 {
                     if (!(Math.Abs(point.X - inkPoint.Position.X) < toleranceWithZoom) ||
                         !(Math.Abs(point.Y - inkPoint.Position.Y) < toleranceWithZoom)) continue;
+                    PushUndo(new IAction[]
+                    {
+                        new StrokeAction
+                        {
+                            Type = ActionType.Erase,
+                            Strokes = new[] {stroke},
+                        }
+                    });
                     _strokes.Remove(stroke);
                     Dry.Invalidate();
                     return;
