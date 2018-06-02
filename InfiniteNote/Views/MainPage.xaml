@@ -50,6 +50,7 @@
                       behaviors:ScrollViewerBinding.ScrollEnabled="{x:Bind viewModel.IsScrollEnabled.Value,Mode=OneWay}">
             <interactivity:Interaction.Behaviors>
                 <behaviors:ScrollViewerBinding/>
+                <behaviors:FrameworkElementBinding/>
             </interactivity:Interaction.Behaviors>
             <Grid Width="{x:Bind viewModel.CanvasWidth.Value,Mode=OneWay}" Height="{x:Bind viewModel.CanvasHeight.Value,Mode=OneWay}">
                 <xaml:CanvasVirtualControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RegionsInvalidated="{x:Bind viewModel.RegionInvalidated}">

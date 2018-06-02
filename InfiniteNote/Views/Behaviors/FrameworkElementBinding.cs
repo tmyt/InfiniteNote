@@ -34,6 +34,8 @@ namespace InfiniteNote.Views.Behaviors
         public void Attach(DependencyObject associatedObject)
         {
             ((FrameworkElement)associatedObject).SizeChanged += SizeChanged;
+            SetActualWidth(associatedObject, ((FrameworkElement)associatedObject).ActualWidth);
+            SetActualHeight(associatedObject, ((FrameworkElement)associatedObject).ActualHeight);
             AssociatedObject = associatedObject;
         }
 
