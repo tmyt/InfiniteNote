@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" IgnorableNamespaces="uap mp">
-  <Identity Name="31464YutakaTsumori.InfiniteNote" Publisher="CN=6A23E604-16F0-4754-92CF-1149BF78AB14" Version="1.1.3.0" />
+  <Identity Name="31464YutakaTsumori.InfiniteNote" Publisher="CN=6A23E604-16F0-4754-92CF-1149BF78AB14" Version="1.1.5.0" />
   <mp:PhoneIdentity PhoneProductId="bbc1fe80-4996-48c7-a7e8-ae37efb2e592" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>Infinite Note</DisplayName>
