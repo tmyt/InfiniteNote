@@ -1,7 +1,12 @@
-﻿using System;
+﻿using InfiniteNote.Extensions;
+using InfiniteNote.Infrastructure;
+using InfiniteNote.Views.Messages;
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using System;
 using System.Collections.Generic;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Foundation;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Provider;
@@ -10,16 +15,16 @@ using Windows.UI.Input;
 using Windows.UI.Input.Inking;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using InfiniteNote.Extensions;
-using InfiniteNote.Infrastructure;
-using InfiniteNote.Views.Messages;
-using Microsoft.Graphics.Canvas.UI.Xaml;
+using Windows.UI.Xaml.Input;
 using Buffer = Windows.Storage.Streams.Buffer;
 
 namespace InfiniteNote.ViewModels
 {
     public partial class MainViewModel
     {
+        private InkDrawingAttributes _previousDefaultDrawingAttributes;
+        private Point _manipulationPoint;
+
         public void RegionInvalidated(CanvasVirtualControl sender, CanvasRegionsInvalidatedEventArgs args)
         {
             foreach (var rect in args.InvalidatedRegions)
@@ -115,12 +120,12 @@ namespace InfiniteNote.ViewModels
 
         #region InkCanvas Events
 
-        public void StrokeStarted()
+        public void StrokeStarted(object sender, EventArgs e)
         {
             IsScrollEnabled.Value = false;
         }
 
-        public void StrokeEnded()
+        public void StrokeEnded(object sender, EventArgs e)
         {
             IsScrollEnabled.Value = true;
         }
@@ -129,7 +134,7 @@ namespace InfiniteNote.ViewModels
         {
             if (e.Properties.IsEraser || ActiveTool.Value == InkToolbarTool.Eraser)
             {
-                var point = e.Position.Translate(ViewportOffsetX.Value, ViewportOffsetY.Value);
+                var point = e.Position.Translate(ViewportOffsetX.Value, ViewportOffsetY.Value).Scale(1 / Scale.Value);
                 if (EraseStrokeFromPoint(point))
                 {
                     Messenger.Default.Send<InvalidateRequestedMessage>();
@@ -140,6 +145,30 @@ namespace InfiniteNote.ViewModels
         public void StrokeCollected(object sender, IReadOnlyList<InkStroke> e)
         {
             DrawStrokes(e);
+            Messenger.Default.Send<InvalidateRequestedMessage>();
+        }
+
+        #endregion
+
+        #region Manipulation Events
+
+        public void ManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e)
+        {
+            ((UIElement)e.OriginalSource).CancelDirectManipulations();
+            e.Handled = true;
+            _manipulationPoint = e.Position;
+        }
+
+        public void ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
+        {
+            ((UIElement)e.OriginalSource).CancelDirectManipulations();
+            e.Handled = true;
+            var newScale = Math.Min(8, Math.Max(0.25, Scale.Value * e.Delta.Scale));
+            var step = newScale / Scale.Value;
+            var center = _manipulationPoint.Translate(ViewportOffsetX.Value, ViewportOffsetY.Value);
+            ViewportOffsetX.Value += center.X * step - center.X;
+            ViewportOffsetY.Value += center.Y * step - center.Y;
+            Scale.Value = newScale;
             Messenger.Default.Send<InvalidateRequestedMessage>();
         }
 

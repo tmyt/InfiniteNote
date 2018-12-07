@@ -1,4 +1,6 @@
-﻿using System;
+﻿using InfiniteNote.Extensions;
+using Microsoft.Graphics.Canvas;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,8 +10,6 @@ using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 using Windows.UI;
 using Windows.UI.Input.Inking;
-using InfiniteNote.Extensions;
-using Microsoft.Graphics.Canvas;
 
 namespace InfiniteNote.Models
 {

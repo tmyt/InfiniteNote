@@ -42,7 +42,8 @@
 
     <Grid>
         <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Enabled"
-                      IsHorizontalRailEnabled="False" IsVerticalRailEnabled="False"
+                      IsHorizontalRailEnabled="False" IsVerticalRailEnabled="False" ManipulationMode="Scale"
+                      ManipulationStarted="{x:Bind viewModel.ManipulationStarted}" ManipulationDelta="{x:Bind viewModel.ManipulationDelta}"
                       behaviors:FrameworkElementBinding.ActualWidth="{x:Bind viewModel.ViewportWidth.Value,Mode=TwoWay}"
                       behaviors:FrameworkElementBinding.ActualHeight="{x:Bind viewModel.ViewportHeight.Value,Mode=TwoWay}"
                       behaviors:ScrollViewerBinding.HorizontalOffset="{x:Bind viewModel.ViewportOffsetX.Value,Mode=TwoWay}"

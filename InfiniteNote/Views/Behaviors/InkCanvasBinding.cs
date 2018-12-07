@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Microsoft.Xaml.Interactivity;
+using System;
 using System.Collections.Generic;
 using Windows.UI.Core;
 using Windows.UI.Input;
 using Windows.UI.Input.Inking;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Microsoft.Xaml.Interactivity;
 
 namespace InfiniteNote.Views.Behaviors
 {
@@ -21,13 +21,13 @@ namespace InfiniteNote.Views.Behaviors
 
         public static bool GetIsTouchInputEnabled(DependencyObject element)
         {
-            return (bool) element.GetValue(IsTouchInputEnabledProperty);
+            return (bool)element.GetValue(IsTouchInputEnabledProperty);
         }
 
         private static void IsTouchInputEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var presenter = ((InkCanvas) d).InkPresenter;
-            if ((bool) e.NewValue)
+            var presenter = ((InkCanvas)d).InkPresenter;
+            if ((bool)e.NewValue)
             {
                 presenter.InputDeviceTypes = CoreInputDeviceTypes.Mouse | CoreInputDeviceTypes.Pen | CoreInputDeviceTypes.Touch;
             }
@@ -69,22 +69,22 @@ namespace InfiniteNote.Views.Behaviors
 
         private void OnStrokeCanceled(InkStrokeInput sender, PointerEventArgs args)
         {
-            StrokeEnded?.Invoke(this, EventArgs.Empty);
+            StrokeEnded?.Invoke(sender, EventArgs.Empty);
         }
 
         private void OnStrokeEnded(InkStrokeInput sender, PointerEventArgs args)
         {
-            StrokeEnded?.Invoke(this, EventArgs.Empty);
+            StrokeEnded?.Invoke(sender, EventArgs.Empty);
         }
 
         private void OnStrokeStarted(InkStrokeInput sender, PointerEventArgs args)
         {
-            StrokeStarted?.Invoke(this, EventArgs.Empty);
+            StrokeStarted?.Invoke(sender, EventArgs.Empty);
         }
 
         private void OnPointerMoved(InkUnprocessedInput sender, PointerEventArgs args)
         {
-            PointerMoved?.Invoke(this, args.CurrentPoint);
+            PointerMoved?.Invoke(sender, args.CurrentPoint);
         }
 
         private void OnStrokeCollected(InkPresenter sender, InkStrokesCollectedEventArgs args)

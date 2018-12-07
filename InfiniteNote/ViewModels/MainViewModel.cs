@@ -1,16 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using InfiniteNote.Extensions;
+using InfiniteNote.Models;
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using Reactive.Bindings;
+using Reactive.Bindings.Extensions;
+using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Storage.Streams;
 using Windows.UI.Input.Inking;
 using Windows.UI.Xaml.Controls;
-using InfiniteNote.Extensions;
-using InfiniteNote.Models;
-using Microsoft.Graphics.Canvas.UI.Xaml;
-using Reactive.Bindings;
-using Reactive.Bindings.Extensions;
 
 namespace InfiniteNote.ViewModels
 {
@@ -20,12 +22,13 @@ namespace InfiniteNote.ViewModels
         private InkRenderer _inkRenderer;
         private bool _resumed;
 
-        public ReactiveProperty<double> CanvasWidth { get; private set; }
-        public ReactiveProperty<double> CanvasHeight { get; private set; }
+        public ReadOnlyReactiveProperty<double> CanvasWidth { get; private set; }
+        public ReadOnlyReactiveProperty<double> CanvasHeight { get; private set; }
         public ReactiveProperty<double> ViewportOffsetX { get; private set; }
         public ReactiveProperty<double> ViewportOffsetY { get; private set; }
         public ReactiveProperty<double> ViewportWidth { get; private set; }
         public ReactiveProperty<double> ViewportHeight { get; private set; }
+        public ReactiveProperty<double> Scale { get; private set; }
         public ReactiveProperty<InkToolbarTool> ActiveTool { get; private set; }
         public ReactiveProperty<bool> IsScrollEnabled { get; private set; }
         public ReactiveProperty<bool> IsTouchInputEnabled { get; private set; }
@@ -34,14 +37,17 @@ namespace InfiniteNote.ViewModels
         {
             _drawingData = new DrawingData();
             _inkRenderer = new InkRenderer();
+            Scale = new ReactiveProperty<double>(1.0);
             CanvasWidth = _drawingData.ObserveProperty(x => x.CanvasWidth)
-                .ToReactiveProperty();
+                .CombineLatest(Scale, (a, b) => a * b)
+                .ToReadOnlyReactiveProperty();
             CanvasHeight = _drawingData.ObserveProperty(x => x.CanvasHeight)
-                .ToReactiveProperty();
-            ViewportOffsetX = _drawingData.ToReactivePropertyAsSynchronized(x => x.OffsetX);
-            ViewportOffsetY = _drawingData.ToReactivePropertyAsSynchronized(x => x.OffsetY);
-            ViewportWidth = _drawingData.ToReactivePropertyAsSynchronized(x => x.ViewWidth);
-            ViewportHeight = _drawingData.ToReactivePropertyAsSynchronized(x => x.ViewHeight);
+                .CombineLatest(Scale, (a, b) => a * b)
+                .ToReadOnlyReactiveProperty();
+            ViewportOffsetX = _drawingData.ToReactivePropertyAsSynchronized(x => x.OffsetX, x => x * Scale.Value, x => x / Scale.Value);
+            ViewportOffsetY = _drawingData.ToReactivePropertyAsSynchronized(x => x.OffsetY, x => x * Scale.Value, x => x / Scale.Value);
+            ViewportWidth = _drawingData.ToReactivePropertyAsSynchronized(x => x.ViewWidth, x => x * Scale.Value, x => x / Scale.Value);
+            ViewportHeight = _drawingData.ToReactivePropertyAsSynchronized(x => x.ViewHeight, x => x * Scale.Value, x => x / Scale.Value);
             ActiveTool = new ReactiveProperty<InkToolbarTool>();
             IsScrollEnabled = new ReactiveProperty<bool>();
             IsTouchInputEnabled = new ReactiveProperty<bool>();
@@ -62,7 +68,7 @@ namespace InfiniteNote.ViewModels
 
         public void DrawStrokes(IEnumerable<InkStroke> strokes)
         {
-            _drawingData.DrawStrokes(strokes.Select(x => x.Translate(ViewportOffsetX.Value, ViewportOffsetY.Value)));
+            _drawingData.DrawStrokes(strokes.Select(x => x.Translate(ViewportOffsetX.Value, ViewportOffsetY.Value, 1 / Scale.Value)));
         }
 
         public Task<InMemoryRandomAccessStream> GeneratePng()
@@ -99,7 +105,19 @@ namespace InfiniteNote.ViewModels
         {
             using (var session = canvas.CreateDrawingSession(rect))
             {
-                _inkRenderer.Render(session, _drawingData.Strokes.Where(x => rect.IsIntersect(x.BoundingRect)));
+                var scaleMatrix = Matrix3x2.CreateScale((float)Scale.Value, (float)Scale.Value);
+                var scaleRect = rect.Scale(1 / Scale.Value);
+                var strokes = _drawingData.Strokes.Where(x => scaleRect.IsIntersect(x.BoundingRect))
+                    .Select(x =>
+                    {
+                        var stroke = x.Clone();
+                        stroke.PointTransform = Matrix3x2.Multiply(stroke.PointTransform, scaleMatrix);
+                        var da = stroke.DrawingAttributes;
+                        da.Size = da.Size.Scale(Scale.Value);
+                        stroke.DrawingAttributes = da;
+                        return stroke;
+                    });
+                _inkRenderer.Render(session, strokes);
             }
         }
     }
