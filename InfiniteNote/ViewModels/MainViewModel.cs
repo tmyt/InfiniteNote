@@ -1,4 +1,5 @@
-﻿using InfiniteNote.Extensions;
+﻿using System;
+using InfiniteNote.Extensions;
 using InfiniteNote.Models;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Reactive.Bindings;
@@ -51,6 +52,13 @@ namespace InfiniteNote.ViewModels
             ActiveTool = new ReactiveProperty<InkToolbarTool>();
             IsScrollEnabled = new ReactiveProperty<bool>();
             IsTouchInputEnabled = new ReactiveProperty<bool>();
+            Scale.Subscribe(x =>
+            {
+                ViewportOffsetX.ForceNotify();
+                ViewportOffsetY.ForceNotify();
+                ViewportWidth.ForceNotify();
+                ViewportHeight.ForceNotify();
+            });
             DataTransferManager.GetForCurrentView().DataRequested += DataRequested;
         }
 
@@ -73,7 +81,7 @@ namespace InfiniteNote.ViewModels
 
         public Task<InMemoryRandomAccessStream> GeneratePng()
         {
-            return _inkRenderer.ConvertInkToPng(_drawingData.Viewport, _drawingData.Strokes);
+            return _inkRenderer.ConvertInkToPng(_drawingData.Viewport, Scale.Value, _drawingData.Strokes);
         }
 
         public async void Loaded()

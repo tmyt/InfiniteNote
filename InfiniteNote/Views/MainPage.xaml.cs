@@ -1,10 +1,4 @@
-﻿using System.Diagnostics;
-using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage.Streams;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media.Animation;
+﻿using Windows.UI.Xaml.Controls;
 using InfiniteNote.ViewModels;
 
 namespace InfiniteNote.Views

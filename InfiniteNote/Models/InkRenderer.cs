@@ -3,6 +3,7 @@ using Microsoft.Graphics.Canvas;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Graphics.Display;
@@ -21,16 +22,25 @@ namespace InfiniteNote.Models
             session.DrawInk(strokes, false);
         }
 
-        public Task<InMemoryRandomAccessStream> ConvertInkToPng(Rect viewport, IEnumerable<InkStroke> strokes)
+        public Task<InMemoryRandomAccessStream> ConvertInkToPng(Rect viewport, double scale, IEnumerable<InkStroke> strokes)
         {
             var device = CanvasDevice.GetSharedDevice();
             var dpi = DisplayInformation.GetForCurrentView().LogicalDpi;
-            var renderTarget = new CanvasRenderTarget(device, (float)viewport.Width, (float)viewport.Height, dpi);
+            var scaledViewport = viewport.Scale(scale);
+            var renderTarget = new CanvasRenderTarget(device, (float)scaledViewport.Width, (float)scaledViewport.Height, dpi);
             using (var ds = renderTarget.CreateDrawingSession())
             {
                 var inkStrokes = strokes
                     .Where(x => x.BoundingRect.IsIntersect(viewport))
-                    .Select(x => x.Translate(-viewport.Left, -viewport.Top));
+                    .Select(x =>
+                    {
+                        var stroke = x.Translate(-viewport.Left, -viewport.Top);
+                        stroke.PointTransform *= Matrix3x2.CreateScale((float)scale);
+                        var da = stroke.DrawingAttributes;
+                        da.Size = da.Size.Scale(scale);
+                        stroke.DrawingAttributes = da;
+                        return stroke;
+                    });
                 Render(ds, inkStrokes);
             }
             var pixels = renderTarget.GetPixelBytes();
