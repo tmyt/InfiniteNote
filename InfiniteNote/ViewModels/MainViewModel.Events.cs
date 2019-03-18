@@ -27,8 +27,11 @@ namespace InfiniteNote.ViewModels
 
         public void RegionInvalidated(CanvasVirtualControl sender, CanvasRegionsInvalidatedEventArgs args)
         {
+            var visibleRegion = new Rect(ViewportOffsetX.Value, ViewportOffsetY.Value,
+                ViewportWidth.Value, ViewportHeight.Value);
             foreach (var rect in args.InvalidatedRegions)
             {
+                if (!visibleRegion.IsIntersect(rect)) continue;
                 RenderPart(sender, rect);
             }
         }
@@ -138,6 +141,7 @@ namespace InfiniteNote.ViewModels
                 if (EraseStrokeFromPoint(point))
                 {
                     Messenger.Default.Send<InvalidateRequestedMessage>();
+                    UpdateMinimap();
                 }
             }
         }
@@ -146,6 +150,7 @@ namespace InfiniteNote.ViewModels
         {
             DrawStrokes(e);
             Messenger.Default.Send<InvalidateRequestedMessage>();
+            UpdateMinimap();
         }
 
         #endregion

@@ -1,9 +1,9 @@
-﻿using System;
-using InfiniteNote.Extensions;
+﻿using InfiniteNote.Extensions;
 using InfiniteNote.Models;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Reactive.Bindings;
 using Reactive.Bindings.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -19,8 +19,8 @@ namespace InfiniteNote.ViewModels
 {
     public partial class MainViewModel
     {
-        private DrawingData _drawingData;
-        private InkRenderer _inkRenderer;
+        private readonly DrawingData _drawingData;
+        private readonly InkRenderer _inkRenderer;
         private bool _resumed;
 
         public ReadOnlyReactiveProperty<double> CanvasWidth { get; private set; }
@@ -49,6 +49,25 @@ namespace InfiniteNote.ViewModels
             ViewportOffsetY = _drawingData.ToReactivePropertyAsSynchronized(x => x.OffsetY, x => x * Scale.Value, x => x / Scale.Value);
             ViewportWidth = _drawingData.ToReactivePropertyAsSynchronized(x => x.ViewWidth, x => x * Scale.Value, x => x / Scale.Value);
             ViewportHeight = _drawingData.ToReactivePropertyAsSynchronized(x => x.ViewHeight, x => x * Scale.Value, x => x / Scale.Value);
+            MinimapImage = new ReactiveProperty<IRandomAccessStream>();
+            MinimapViewportScale = _drawingData.ObserveProperty(x => x.CanvasWidth)
+                .CombineLatest(_drawingData.ObserveProperty(x => x.CanvasHeight), ValueTuple.Create)
+                .Select(((double width, double height) x) =>
+                {
+                    var scaleW = 100 / x.width;
+                    var scaleH = 100 / x.height;
+                    return Math.Min(scaleW, scaleH);
+                }).ToReadOnlyReactiveProperty();
+            MinimapViewportWidth = _drawingData.ObserveProperty(x => x.ViewWidth).Select(x => x * MinimapViewportScale.Value)
+                .ToReadOnlyReactiveProperty();
+            MinimapViewportHeight = _drawingData.ObserveProperty(x => x.ViewHeight).Select(x => x * MinimapViewportScale.Value)
+                .ToReadOnlyReactiveProperty();
+            MinimapViewportLeft = _drawingData.ObserveProperty(x => x.OffsetX)
+                .Select(x => x * MinimapViewportScale.Value + (100 - _drawingData.CanvasWidth * MinimapViewportScale.Value) / 2)
+                .ToReadOnlyReactiveProperty();
+            MinimapViewportTop = _drawingData.ObserveProperty(x => x.OffsetY)
+                .Select(x => x * MinimapViewportScale.Value + (100 - _drawingData.CanvasHeight * MinimapViewportScale.Value) / 2)
+                .ToReadOnlyReactiveProperty();
             ActiveTool = new ReactiveProperty<InkToolbarTool>();
             IsScrollEnabled = new ReactiveProperty<bool>();
             IsTouchInputEnabled = new ReactiveProperty<bool>();
@@ -76,7 +95,7 @@ namespace InfiniteNote.ViewModels
 
         public void DrawStrokes(IEnumerable<InkStroke> strokes)
         {
-            _drawingData.DrawStrokes(strokes.Select(x => x.Translate(ViewportOffsetX.Value, ViewportOffsetY.Value, 1 / Scale.Value)));
+            _drawingData.DrawStrokes(strokes.Select(x => x.Translate(ViewportOffsetX.Value, ViewportOffsetY.Value)));
         }
 
         public Task<InMemoryRandomAccessStream> GeneratePng()
@@ -93,6 +112,7 @@ namespace InfiniteNote.ViewModels
         public async Task ResumeCore()
         {
             if (_resumed || !await _drawingData.RestoreState()) return;
+            UpdateMinimap();
             _resumed = true;
         }
 
@@ -119,12 +139,13 @@ namespace InfiniteNote.ViewModels
                     .Select(x =>
                     {
                         var stroke = x.Clone();
-                        stroke.PointTransform = Matrix3x2.Multiply(stroke.PointTransform, scaleMatrix);
+                        stroke.PointTransform *= scaleMatrix;
                         var da = stroke.DrawingAttributes;
                         da.Size = da.Size.Scale(Scale.Value);
                         stroke.DrawingAttributes = da;
                         return stroke;
-                    });
+                    })
+                    .ToArray();
                 _inkRenderer.Render(session, strokes);
             }
         }

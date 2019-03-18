@@ -79,6 +79,16 @@
                 </messages:StartAnimationMessage>
             </interactivity:Interaction.Behaviors>
         </Rectangle>
+        <Canvas Width="100" Height="100" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,15,15" Background="Gray" Opacity="0.5" IsHitTestVisible="False">
+            <Image behaviors:ImageBinding.ImageStream="{x:Bind viewModel.MinimapImage.Value,Mode=OneWay}"
+                   Width="100" Height="100" Stretch="Uniform"/>
+            <Rectangle Stroke="Blue" StrokeThickness="1"
+                       Width="{x:Bind viewModel.MinimapViewportWidth.Value,Mode=OneWay}"
+                       Height="{x:Bind viewModel.MinimapViewportHeight.Value,Mode=OneWay}"
+                       Canvas.Top="{x:Bind viewModel.MinimapViewportTop.Value,Mode=OneWay}"
+                       Canvas.Left="{x:Bind viewModel.MinimapViewportLeft.Value,Mode=OneWay}"/>
+        </Canvas>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
             <InkToolbar TargetInkCanvas="{Binding ElementName=InkCanvas}" EraseAllClicked="{x:Bind viewModel.EraseAll}"
                         behaviors:InkToolbarBinding.ActiveToolKind="{x:Bind viewModel.ActiveTool.Value,Mode=TwoWay}">

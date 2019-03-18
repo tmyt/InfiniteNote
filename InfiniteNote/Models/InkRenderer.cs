@@ -22,7 +22,7 @@ namespace InfiniteNote.Models
             session.DrawInk(strokes, false);
         }
 
-        public Task<InMemoryRandomAccessStream> ConvertInkToPng(Rect viewport, double scale, IEnumerable<InkStroke> strokes)
+        public Task<InMemoryRandomAccessStream> ConvertInkToPng(Rect viewport, double scale, IEnumerable<InkStroke> strokes, double minStrokeThickness = 0)
         {
             var device = CanvasDevice.GetSharedDevice();
             var dpi = DisplayInformation.GetForCurrentView().LogicalDpi;
@@ -37,7 +37,8 @@ namespace InfiniteNote.Models
                         var stroke = x.Translate(-viewport.Left, -viewport.Top);
                         stroke.PointTransform *= Matrix3x2.CreateScale((float)scale);
                         var da = stroke.DrawingAttributes;
-                        da.Size = da.Size.Scale(scale);
+                        var sz = da.Size.Scale(scale);
+                        da.Size = new Size(Math.Max(minStrokeThickness, sz.Width), Math.Max(minStrokeThickness, sz.Height));
                         stroke.DrawingAttributes = da;
                         return stroke;
                     });

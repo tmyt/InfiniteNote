@@ -103,6 +103,8 @@ namespace InfiniteNote.Models
             }
         }
 
+        public double Scale { get; set; }
+
         public Rect Viewport => new Rect(OffsetX, OffsetY, ViewWidth, ViewHeight);
         public IReadOnlyList<InkStroke> Strokes => _strokes;
 

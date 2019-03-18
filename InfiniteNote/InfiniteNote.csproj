@@ -121,9 +121,11 @@
     <Compile Include="Models\DrawingData.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.Events.cs" />
+    <Compile Include="ViewModels\MainViewModel.Minimap.cs" />
     <Compile Include="Views\Actions\StartAnimationAction.cs" />
     <Compile Include="Views\Behaviors\AppLifecycle.cs" />
     <Compile Include="Views\Behaviors\FrameworkElementBinding.cs" />
+    <Compile Include="Views\Behaviors\ImageBinding.cs" />
     <Compile Include="Views\Behaviors\InkCanvasBinding.cs" />
     <Compile Include="Views\Behaviors\InkToolbarBinding.cs" />
     <Compile Include="Views\Messages\InvalidateRequestedMessage.cs" />
